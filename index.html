@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>图片表格转换器</title>
+    <style type="text/css">
+        .ocr{width:400px;margin:0 auto;text-align:center;}
+        input[type="file"]{display:none;}
+        #select_file{background-color:lightyellow;border-radius:5px;font-size:20px;border-style:solid;border-color:lightyellow;cursor:pointer;}
+    </style>
+    <script src="/statics/js/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            //美化input上传元素
+            $("#select_file").click(function(){
+                $("input[type='file']").click();
+            });
+
+            $("input[type='file']").change(function(){
+                $("input[type='text']").val($("input[type='file']").val());
+            })
+
+            var $ocrForm=$('#form_ocr');
+            alert("欢迎使用如此简陋的页面");
+            //var formData = new FormData($('#form_ocr')[0]);
+            $ocrForm.submit(function(){
+                file_name=$("[name='pic']").val();
+                if(file_name!=""){
+                    var upload_file=$("[name='pic']")[0].files[0];
+                    var formData=new FormData();
+                    formData.append("pic",upload_file);
+                    formData.append("csrfmiddlewaretoken",$("[name='csrfmiddlewaretoken']").val());
+                    $newDiv=$("<div id='cover_div'></div>"); //页面覆盖层，不让用户操作
+                    $('body').append($newDiv);
+                    $coverDiv=$("#cover_div");
+                    width=$(document).width();
+                    height=$(document).height();
+                    $coverDiv.css('height',height);
+                    $coverDiv.css('width',width);
+                    //alert($coverDiv.width())
+                    $coverDiv.css('position','absolute');
+                    $coverDiv.css("left","0px");
+                    $coverDiv.css("top","0px");
+                    $coverDiv.css('background-color','lightcyan');
+                    $coverDiv.css('opacity',0.5);
+                    $newDiv=$("<div id='wait'>转换中，请等待</br></div>");  //等待框
+                    $('body').append($newDiv);
+                    $waitdiv=$("#wait");
+                    $waitdiv.css("margin","0 auto");
+                    $waitdiv.css("position","absolute");
+                    $waitdiv.css("text-align:","center");
+                    $waitdiv.css("padding","5px");
+                    $waitdiv.css("height","50px");
+                    $waitdiv.css("width","150px");
+                    $waitdiv.css("border-style","solid");
+                    $waitdiv.css("border-color","blue");
+                    $waitdiv.css("left","700px");
+                    $waitdiv.css("top","300px");
+                    $waitdiv.css("background-color","lavender");
+                    var dot=function() {   //等待框动画
+                        dot_number = 0;
+                        var a = function () {
+                            if (dot_number < 3) {
+                                $waitdiv.append("<span>.</span");
+                                dot_number++;
+                            } else {
+                                $waitdiv.children("span").remove();
+                                dot_number = 0;
+                            }
+                        }
+                        var mytime = setInterval(a, 500);
+                        $waitdiv.attr("time",mytime);
+                    }
+                    dot();
+                    $.ajax({
+                        'url':"{% url 'ocr:form_ocr' %}",
+                        //'data':{'pic':formData,'csrfmiddlewaretoken':$("[name='csrfmiddlewaretoken']").val()},
+                        'data':formData,
+                        'type':'POST',
+                        'processData':false,
+                        'contentType':false,
+                        'success':function(data){
+                            var return_msg=data.return_msg;
+                            if (return_msg==0){
+                                alert("抱歉，发生错误，或网络繁忙，请重新上传");
+                                $("body").children("#wait").remove(); //清除覆盖层
+                                $("body").children("#cover_div").remove();
+                            }
+                            else if(return_msg==1){
+                                alert("转换成功，1秒后打开下载页面");
+                                clearInterval($waitdiv.attr("time"));
+                                setTimeout(function(){
+                                    url=data.file_url;
+                                    window.open(url);
+                                    $("body").children("#wait").remove(); //清除覆盖层
+                                    $("body").children("#cover_div").remove();
+
+                                },3600);
+                            }
+                        }
+                    });
+                }else{
+                    alert("请选择文件上传");
+                }
+                return false;
+                })
+        })
+    </script>
+</head>
+<br>
+</br></br></br></br>
+<h1 align="center">图片表格转换器（调用百度api）</h1>
+<div class="ocr">
+    <form action="" method="post" enctype="multipart/form-data" id="form_ocr">
+        {% csrf_token %}
+        <p><input type="file" name="pic" id="file" ></p>
+        <p><input type="text" style="height:25px;width:250px;font-size:15px;">  <input type="button" id="select_file" value="选择上传文件"></p>
+    <input type="submit" value="上传" style="font-size:20px;background-color:azure;border:solid azure;cursor:pointer">
+    </form>
+</div>
+
+</body>
+</html>
